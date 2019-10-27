@@ -14,15 +14,32 @@
 
 package io.jaegertracing.thrift.internal.senders;
 
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.object.IsCompatibleType.typeCompatibleWith;
+import static org.hamcrest.MatcherAssert.assertThat;
 
+import java.util.Properties;
 import io.jaegertracing.Configuration;
 import io.jaegertracing.internal.senders.NoopSender;
 import io.jaegertracing.spi.Sender;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class ThriftSenderFactoryTest {
+
+  private static Properties originalProps;
+
+  @BeforeClass
+  public static void beforeClass() {
+    originalProps = new Properties(System.getProperties());
+  }
+
+  @AfterClass
+  public static void afterClass() {
+    System.setProperties(originalProps);
+  }
 
   @Before
   public void setup() {
@@ -38,47 +55,59 @@ public class ThriftSenderFactoryTest {
   @Test
   public void testSenderWithEndpointWithoutAuthData() {
     System.setProperty(Configuration.JAEGER_ENDPOINT, "https://jaeger-collector:14268/api/traces");
+
     Sender sender = Configuration.SenderConfiguration.fromEnv().getSender();
-    assertTrue(sender instanceof HttpSender);
+
+    assertThat(sender.getClass(), is(typeCompatibleWith(HttpSender.class)));
   }
 
   @Test
   public void testSenderWithAgentDataFromEnv() {
     System.setProperty(Configuration.JAEGER_AGENT_HOST, "jaeger-agent");
     System.setProperty(Configuration.JAEGER_AGENT_PORT, "6832");
+
     Sender sender = Configuration.SenderConfiguration.fromEnv().getSender();
-    assertTrue(sender instanceof NoopSender);
+
+    assertThat(sender.getClass(), is(typeCompatibleWith(NoopSender.class)));
   }
 
   @Test
   public void testSenderWithBasicAuthUsesHttpSender() {
-    Configuration.SenderConfiguration senderConfiguration = new Configuration.SenderConfiguration()
-        .withEndpoint("https://jaeger-collector:14268/api/traces")
-        .withAuthUsername("username")
-        .withAuthPassword("password");
-    assertTrue(senderConfiguration.getSender() instanceof HttpSender);
-  }
+    Sender sender = new Configuration.SenderConfiguration()
+      .withEndpoint("https://jaeger-collector:14268/api/traces")
+      .withAuthUsername("username")
+      .withAuthPassword("password")
+      .getSender();
 
+    assertThat(sender.getClass(), is(typeCompatibleWith(HttpSender.class)));
+  }
+  
   @Test
   public void testSenderWithAuthTokenUsesHttpSender() {
-    Configuration.SenderConfiguration senderConfiguration = new Configuration.SenderConfiguration()
-        .withEndpoint("https://jaeger-collector:14268/api/traces")
-        .withAuthToken("authToken");
-    assertTrue(senderConfiguration.getSender() instanceof HttpSender);
-  }
+    Sender sender = new Configuration.SenderConfiguration()
+      .withEndpoint("https://jaeger-collector:14268/api/traces")
+      .withAuthToken("authToken")
+      .getSender();
 
+    assertThat(sender.getClass(), is(typeCompatibleWith(HttpSender.class)));
+  }
+  
   @Test
   public void testSenderWithAllPropertiesReturnsHttpSender() {
     System.setProperty(Configuration.JAEGER_ENDPOINT, "https://jaeger-collector:14268/api/traces");
     System.setProperty(Configuration.JAEGER_AGENT_HOST, "jaeger-agent");
     System.setProperty(Configuration.JAEGER_AGENT_PORT, "6832");
+    
+    Sender sender = Configuration.SenderConfiguration.fromEnv().getSender();
 
-    assertTrue(Configuration.SenderConfiguration.fromEnv().getSender() instanceof HttpSender);
+    assertThat(sender.getClass(), is(typeCompatibleWith(HttpSender.class)));
   }
-
+  
   @Test
   public void testDefaultConfigurationReturnsUdpSender() {
-    assertTrue(Configuration.SenderConfiguration.fromEnv().getSender() instanceof UdpSender);
+    Sender sender = Configuration.SenderConfiguration.fromEnv().getSender();
+
+    assertThat(sender.getClass(), is(typeCompatibleWith(UdpSender.class)));
   }
 
 }
